@@ -1,741 +1,1041 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="내가 학습한 이미지 분류 AI로 컴퓨터와 가위바위보 대결을 합니다.">
-  <title>AI 가위바위보 대결</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-  <style>
-    :root {
-      --bg-1: #120a2e; --bg-2: #2a0f5c; --panel: rgba(22, 14, 54, .72); --line: rgba(160, 130, 255, .28);
-      --ink: #f4f1ff; --muted: #b6addb; --you: #2ee6a6; --cpu: #ff4f8b; --gold: #ffd23f; --draw: #8fb8ff;
-      color-scheme: dark;
-    }
-    * { box-sizing: border-box; }
-    html { min-height: 100%; background: #1d0c45; }
-    body { min-height: 100vh; }
-    body {
-      margin: 0; color: var(--ink); overflow-x: hidden;
-      font: 16px/1.55 "Pretendard", system-ui, -apple-system, "Malgun Gothic", sans-serif;
-      background: radial-gradient(1200px 700px at 50% -10%, #5b2bd6 0%, transparent 60%),
-                  radial-gradient(900px 600px at 100% 100%, #b0186b 0%, transparent 55%),
-                  linear-gradient(180deg, var(--bg-1), var(--bg-2));
-      background-attachment: fixed;
-    }
-    /* 움직이는 네온 바닥 격자 */
-    .grid-floor {
-      position: fixed; left: -50%; right: -50%; bottom: -10vh; height: 55vh; z-index: -1; pointer-events: none;
-      background-image: linear-gradient(rgba(255, 79, 139, .35) 2px, transparent 2px), linear-gradient(90deg, rgba(120, 90, 255, .35) 2px, transparent 2px);
-      background-size: 60px 60px; transform: perspective(500px) rotateX(62deg); transform-origin: bottom;
-      mask-image: linear-gradient(to top, #000 10%, transparent 90%); -webkit-mask-image: linear-gradient(to top, #000 10%, transparent 90%);
-      animation: floor 3s linear infinite;
-    }
-    @keyframes floor { to { background-position: 0 60px; } }
-    .floaters { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
-    .floaters span { position: absolute; font-size: 2.2rem; opacity: .14; animation: float 14s ease-in-out infinite; }
-    @keyframes float { 50% { transform: translateY(-40px) rotate(18deg); } }
-    [hidden] { display: none !important; }
-    main { width: min(1240px, 100%); margin: auto; padding: 22px 20px 40px; }
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>색상 AI 비전 인식 테스트</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Design tokens · white-bg, dual-theme ── */
+:root {
+  --bg:         #ffffff;
+  --bg-2:       #f8fafc;
+  --bg-3:       #f1f5f9;
+  --panel:      #ffffff;
+  --border:     #e2e8f0;
+  --text:       #1e293b;
+  --muted:      #64748b;
+  --subtle:     #94a3b8;
+  --accent:     #3b82f6;
+  --accent-bg:  #eff6ff;
+  --success:    #22c55e;
+  --warn:       #f59e0b;
+  --danger:     #ef4444;
+  --sh-sm:      0 1px 2px rgba(0,0,0,.06);
+  --sh:         0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --sh-md:      0 4px 12px rgba(0,0,0,.08);
+  --r:          12px;
+  --r-sm:       8px;
+  --r-lg:       18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:         #0f172a;
+    --bg-2:       #1e293b;
+    --bg-3:       #273549;
+    --panel:      #1e293b;
+    --border:     #334155;
+    --text:       #f1f5f9;
+    --muted:      #94a3b8;
+    --subtle:     #64748b;
+    --accent:     #60a5fa;
+    --accent-bg:  rgba(96,165,250,.12);
+    --sh-sm:      0 1px 2px rgba(0,0,0,.4);
+    --sh:         0 1px 3px rgba(0,0,0,.5);
+    --sh-md:      0 4px 12px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:         #0f172a;
+  --bg-2:       #1e293b;
+  --bg-3:       #273549;
+  --panel:      #1e293b;
+  --border:     #334155;
+  --text:       #f1f5f9;
+  --muted:      #94a3b8;
+  --subtle:     #64748b;
+  --accent:     #60a5fa;
+  --accent-bg:  rgba(96,165,250,.12);
+  --sh-sm:      0 1px 2px rgba(0,0,0,.4);
+  --sh:         0 1px 3px rgba(0,0,0,.5);
+  --sh-md:      0 4px 12px rgba(0,0,0,.5);
+  color-scheme: dark;
+}
 
-    /* 제목 */
-    header { text-align: center; margin-bottom: 18px; }
-    h1 {
-      font-family: "Black Han Sans", "Pretendard", sans-serif; font-weight: 400; margin: 0;
-      font-size: clamp(2.2rem, 6vw, 4rem); line-height: 1.1; letter-spacing: .02em;
-      background: linear-gradient(90deg, var(--you), #fff 45%, var(--cpu)); -webkit-background-clip: text; background-clip: text; color: transparent;
-      filter: drop-shadow(0 4px 18px rgba(255, 79, 139, .35));
-    }
-    header p { color: var(--muted); margin: 6px 0 0; }
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Sans KR", "Inter", system-ui, -apple-system, "Malgun Gothic", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
 
-    /* 점수판 */
-    .scoreboard { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; margin: 0 auto 18px; max-width: 760px; }
-    .score { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(10px); }
-    .score.cpu { flex-direction: row-reverse; text-align: right; }
-    .score .who { font-weight: 800; letter-spacing: .08em; font-size: .85rem; }
-    .score.you .who { color: var(--you); } .score.cpu .who { color: var(--cpu); }
-    .score .num { font-family: "Black Han Sans", sans-serif; font-size: 2.6rem; line-height: 1; margin-left: auto; }
-    .score.cpu .num { margin-left: 0; margin-right: auto; }
-    .pips { display: flex; gap: 6px; }
-    .pip { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); }
-    .you .pip.on { background: var(--you); border-color: var(--you); box-shadow: 0 0 12px var(--you); }
-    .cpu .pip.on { background: var(--cpu); border-color: var(--cpu); box-shadow: 0 0 12px var(--cpu); }
-    .round { text-align: center; font-weight: 800; color: var(--gold); font-size: .95rem; letter-spacing: .06em; }
-    .round small { display: block; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding-block: 32px 52px;
+}
 
-    /* 경기장 */
-    .arena { display: grid; grid-template-columns: minmax(0, 1fr) 150px minmax(0, 1fr); gap: 18px; align-items: stretch; }
-    .side { background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 16px; backdrop-filter: blur(10px); min-width: 0; transition: box-shadow .3s, border-color .3s; }
-    .side.win { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold), 0 0 40px rgba(255, 210, 63, .45); }
-    .side-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 800; letter-spacing: .06em; }
-    .side.you .side-head { color: var(--you); } .side.cpu .side-head { color: var(--cpu); }
-    .tag { font-size: .75rem; padding: 3px 9px; border-radius: 99px; background: rgba(255,255,255,.08); color: var(--muted); letter-spacing: 0; font-weight: 600; }
-    .stage { position: relative; aspect-ratio: 1; border-radius: 18px; overflow: hidden; background: rgba(0,0,0,.35); display: grid; place-items: center; }
-    .you .stage { border: 3px solid rgba(46, 230, 166, .5); } .cpu .stage { border: 3px solid rgba(255, 79, 139, .5); }
-    #video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    #skeleton { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
-    .frame { position: absolute; inset: 14%; border: 2px dashed rgba(255,255,255,.5); border-radius: 16px; z-index: 2; pointer-events: none; }
-    #placeholder { text-align: center; color: var(--muted); padding: 20px; }
-    #placeholder b { display: block; font-size: 3.4rem; margin-bottom: 6px; }
-    .lock { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 3; padding: 6px 14px; border-radius: 99px; background: rgba(10, 6, 30, .8); font-weight: 800; white-space: nowrap; }
-    #cpu-hand { font-size: clamp(5rem, 14vw, 9rem); line-height: 1; filter: drop-shadow(0 8px 24px rgba(255, 79, 139, .45)); }
-    #cpu-hand.shake { animation: shake .18s linear infinite; }
-    @keyframes shake { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
-    #cpu-name { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-weight: 800; color: var(--muted); }
-    .now { margin-top: 12px; }
-    .now-line { display: flex; justify-content: space-between; font-size: .9rem; color: var(--muted); }
-    .now-line b { color: var(--ink); }
-    .meter { height: 8px; border-radius: 99px; background: rgba(255,255,255,.1); overflow: hidden; margin-top: 6px; }
-    .meter div { height: 100%; width: 0; background: linear-gradient(90deg, var(--you), #9cffd9); transition: width .2s; }
+/* ── Header ── */
+.hdr {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.hdr h1 {
+  font-size: clamp(1.5rem, 4vw, 2.3rem);
+  font-weight: 900;
+  letter-spacing: -.025em;
+  line-height: 1.2;
+  text-wrap: balance;
+  color: var(--text);
+}
+.hdr p {
+  color: var(--muted);
+  margin-top: 6px;
+  font-size: .9rem;
+}
 
-    .center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
-    .vs { font-family: "Black Han Sans", sans-serif; font-size: 3.4rem; line-height: 1; color: var(--gold); text-shadow: 0 0 22px rgba(255, 210, 63, .7); }
-    #countdown { font-family: "Black Han Sans", sans-serif; font-size: 2.4rem; min-height: 3.2rem; color: #fff; }
-    #countdown.pop { animation: pop .5s ease; }
-    @keyframes pop { 0% { transform: scale(2); opacity: 0; } 60% { transform: scale(.95); opacity: 1; } 100% { transform: scale(1); } }
+/* ── Grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 660px) { .grid { grid-template-columns: 1fr; } }
 
-    /* 결과 배너 */
-    #banner {
-      margin: 18px auto 0; max-width: 760px; text-align: center; padding: 14px 18px; border-radius: 18px;
-      background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(10px); min-height: 72px;
-    }
-    #banner-title { font-family: "Black Han Sans", sans-serif; font-size: clamp(1.6rem, 4vw, 2.4rem); line-height: 1.2; }
-    #banner-sub { color: var(--muted); margin: 2px 0 0; }
-    #banner.win #banner-title { color: var(--gold); } #banner.lose #banner-title { color: var(--cpu); } #banner.draw #banner-title { color: var(--draw); }
-    #banner.flash { animation: pop .45s ease; }
+/* ── Card ── */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh);
+  overflow: hidden;
+}
+.card-head {
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.card-ttl {
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.card-body { padding: 16px 18px; }
 
-    /* 버튼 */
-    .actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
-    button {
-      font: inherit; font-weight: 800; border-radius: 14px; padding: 12px 22px; min-height: 52px; cursor: pointer;
-      border: 1px solid var(--line); background: rgba(255,255,255,.08); color: var(--ink); transition: transform .12s, filter .2s;
-    }
-    button.big { font-size: 1.15rem; padding: 14px 34px; border: 0; color: #1a0b33; background: linear-gradient(90deg, var(--gold), #ffa53f); box-shadow: 0 8px 26px rgba(255, 170, 63, .45); }
-    button:hover:not(:disabled) { filter: brightness(1.1); }
-    button:active:not(:disabled) { transform: scale(.96); }
-    button:disabled { opacity: .4; cursor: not-allowed; }
-    button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+/* ── Tabs ── */
+.tabs {
+  display: flex; gap: 3px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 3px;
+}
+.tab-btn {
+  flex: 1; padding: 6px 12px;
+  border: none; background: transparent;
+  border-radius: calc(var(--r-sm) - 2px);
+  cursor: pointer; font: inherit;
+  font-size: .83rem; font-weight: 600;
+  color: var(--muted);
+  transition: background .15s, color .15s;
+}
+.tab-btn.active {
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--sh-sm);
+}
+.tab-btn:hover:not(.active) { color: var(--text); }
+.tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-    /* 기록 · 설정 */
-    .bottom { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; margin-top: 22px; }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 16px 18px; backdrop-filter: blur(10px); min-width: 0; }
-    .card h2 { font-size: 1rem; margin: 0 0 10px; letter-spacing: .03em; }
-    #log { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto; }
-    #log li { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.07); font-size: .95rem; }
-    #log li:empty { display: none; }
-    #log .r { color: var(--muted); font-size: .82rem; }
-    #log .res { font-weight: 800; }
-    #log .res.win { color: var(--gold); } #log .res.lose { color: var(--cpu); } #log .res.draw { color: var(--draw); }
-    #log-empty { color: var(--muted); font-size: .9rem; margin: 0; }
-    .setting-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; font-size: .92rem; color: var(--muted); }
-    .setting-row strong { color: var(--ink); }
-    #camera-select { font: inherit; font-size: .9rem; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.3); color: var(--ink); flex: 1 1 200px; min-width: 0; min-height: 42px; }
-    .setting-row button { min-height: 42px; padding: 8px 14px; font-size: .9rem; }
-    input[type="range"] { accent-color: var(--gold); width: 130px; }
-    #status, #model-status { font-size: .88rem; color: var(--muted); margin: 0 0 8px; overflow-wrap: anywhere; }
-    #status.error, #model-status.error { color: #ff9db8; }
+/* ── Preview (camera) ── */
+.preview-wrap {
+  aspect-ratio: 4 / 3;
+  background: var(--bg-3);
+  border-radius: var(--r);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  max-width: 100%;
+}
+#video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.preview-ph {
+  text-align: center;
+  color: var(--subtle);
+  padding: 16px;
+  pointer-events: none;
+  user-select: none;
+}
+.preview-ph .ph-icon { font-size: 2.4rem; margin-bottom: 6px; }
+.preview-ph p { font-size: .85rem; }
 
-    /* 꽃가루 */
-    #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+/* ── Upload zone ── */
+.upload-zone {
+  aspect-ratio: 4 / 3;
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  text-align: center;
+  padding: 20px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+  max-width: 100%;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.upload-zone #img-input {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+  width: 100%; height: 100%;
+}
+.upload-zone .uz-icon { font-size: 2rem; color: var(--subtle); }
+.upload-zone .uz-label { font-size: .88rem; font-weight: 600; color: var(--muted); }
+.upload-zone .uz-hint { font-size: .78rem; color: var(--subtle); }
 
-    @media (max-width: 820px) {
-      main { padding: 16px 16px 32px; }
-      .arena { grid-template-columns: 1fr 1fr; }
-      .center { grid-column: 1 / -1; order: -1; flex-direction: row; gap: 18px; }
-      .vs { font-size: 2.4rem; }
-      .bottom { grid-template-columns: 1fr; }
-      .scoreboard { gap: 8px; }
-      .score { padding: 10px 12px; gap: 8px; } .score .num { font-size: 2rem; } .pips { display: none; }
-    }
-    @media (max-width: 480px) { .side { padding: 10px; } .side-head .tag { display: none; } #placeholder { font-size: .72rem; padding: 8px; } #placeholder b { font-size: 2.2rem; } #cpu-hand { font-size: 3.6rem; } #cpu-name { bottom: 6px; font-size: .8rem; } .lock { font-size: .75rem; bottom: 6px; } }
-    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-  </style>
-</head>
-<body>
-  <!--
-    GitHub 저장소 구성:
-    index.html
-    model/model.json
-    model/metadata.json
-    model/weights.bin
+.file-preview-wrap {
+  aspect-ratio: 4 / 3;
+  background: var(--bg-3);
+  border-radius: var(--r);
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 12px;
+  max-width: 100%;
+}
+#img-preview {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: block;
+}
 
-    Teachable Machine에서 '가위', '바위', '보' 세 클래스로 학습한 이미지 모델을
-    TensorFlow.js 형식으로 내보내 model 폴더에 넣으세요.
-    (손이 없는 '배경' 클래스를 하나 더 만들면 인식이 더 안정적입니다.)
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 8px 15px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit; font-size: .87rem; font-weight: 600;
+  cursor: pointer; min-height: 36px;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: var(--bg-2); }
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn:disabled { opacity: .42; cursor: not-allowed; }
+.btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-    ✏️ 클래스 이름이 다르면 아래 <script> 맨 위 MOVES 부분을 수정하세요.
-  -->
-  <div class="grid-floor" aria-hidden="true"></div>
-  <div class="floaters" aria-hidden="true">
-    <span style="left:6%;top:18%">✌️</span><span style="left:88%;top:12%;animation-delay:-4s">✊</span>
-    <span style="left:12%;top:70%;animation-delay:-8s">🖐️</span><span style="left:80%;top:62%;animation-delay:-2s">✌️</span>
-    <span style="left:48%;top:8%;animation-delay:-6s">✊</span>
-  </div>
-  <canvas id="confetti" aria-hidden="true"></canvas>
+.btn-row { display: flex; gap: 7px; flex-wrap: wrap; }
 
-  <main>
-    <header>
-      <h1 id="page-title">AI 가위바위보 대결</h1>
-      <p>내가 학습시킨 AI가 내 손을 읽는다! 컴퓨터를 이겨보세요.</p>
-    </header>
+/* ── Status line ── */
+.status-ln {
+  display: flex; align-items: center; gap: 6px;
+  font-size: .8rem; color: var(--muted);
+  min-height: 28px; padding-top: 6px;
+}
+.sdot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--subtle); flex-shrink: 0;
+  transition: background .3s;
+}
+.sdot.on   { background: var(--success); }
+.sdot.warn { background: var(--warn); }
+.sdot.err  { background: var(--danger); }
+.status-ln.err-line { color: var(--danger); }
 
-    <div class="scoreboard" aria-label="점수판">
-      <div class="score you"><div><div class="who">YOU</div><div class="pips" id="you-pips"></div></div><div class="num" id="you-score">0</div></div>
-      <div class="round" id="round-label">ROUND 1<small id="rule-label">3판 2선승</small></div>
-      <div class="score cpu"><div><div class="who">CPU</div><div class="pips" id="cpu-pips"></div></div><div class="num" id="cpu-score">0</div></div>
-    </div>
+/* ── Results ── */
+.res-header {
+  font-size: .75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--subtle); margin-bottom: 6px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.live-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: 99px; padding: 2px 8px;
+  font-size: .7rem; font-weight: 600; color: var(--muted);
+  letter-spacing: .02em;
+}
+.ldot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--success);
+  animation: lpulse 1.6s ease-in-out infinite;
+}
+@keyframes lpulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 
-    <div class="arena">
-      <section class="side you" id="side-you" aria-label="나">
-        <div class="side-head">🙋 PLAYER <span class="tag">웹캠</span></div>
-        <div class="stage">
-          <span class="frame" id="frame" hidden></span>
-          <p id="placeholder"><b>📷</b>아래 '웹캠 시작'을 누르고<br>손을 점선 안에 보여주세요.</p>
-          <video id="video" autoplay muted playsinline aria-label="실시간 웹캠 영상" hidden></video>
-          <canvas id="skeleton" width="400" height="400" aria-hidden="true" hidden></canvas>
-          <div class="lock" id="you-lock" hidden></div>
+.empty-res {
+  text-align: center;
+  padding: 36px 16px;
+  color: var(--subtle);
+}
+.empty-res .er-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.empty-res p { font-size: .88rem; line-height: 1.5; }
+
+/* result rows */
+.res-list { display: flex; flex-direction: column; }
+.res-item {
+  display: grid;
+  grid-template-columns: 32px 1fr 50px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.res-item:last-child { border-bottom: none; padding-bottom: 4px; }
+.res-item.top { padding: 14px 0 12px; }
+
+.swatch {
+  width: 32px; height: 32px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.12), 0 1px 3px rgba(0,0,0,.1);
+}
+.res-item.top .swatch { width: 38px; height: 38px; border-radius: 9px; }
+
+.res-info { min-width: 0; }
+.res-name {
+  font-size: .93rem; font-weight: 700;
+  display: flex; align-items: center; gap: 6px;
+  line-height: 1.2; margin-bottom: 4px;
+}
+.res-item.top .res-name { font-size: 1.06rem; }
+.rank-tag {
+  font-size: .67rem; font-weight: 700; letter-spacing: .04em;
+  padding: 2px 6px; border-radius: 4px;
+  background: var(--bg-3); color: var(--muted);
+  flex-shrink: 0;
+}
+.res-item.top .rank-tag { background: var(--accent-bg); color: var(--accent); }
+.bar-track {
+  height: 5px; border-radius: 3px;
+  background: var(--bg-3); overflow: hidden;
+}
+.bar-fill {
+  height: 100%; border-radius: 3px;
+  transition: width .35s ease;
+  min-width: 2px;
+}
+.res-pct {
+  font-size: .92rem; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.res-item.top .res-pct { color: var(--accent); font-size: 1.05rem; }
+
+/* ── Settings ── */
+.settings-sec { margin-top: 18px; }
+.set-toggle {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; color: var(--muted);
+  font: inherit; font-size: .87rem; font-weight: 600;
+  padding: 8px 0; border: none; background: none;
+  transition: color .15s;
+}
+.set-toggle:hover { color: var(--text); }
+.set-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.set-arrow { transition: transform .2s; }
+.set-toggle[aria-expanded="true"] .set-arrow { transform: rotate(180deg); }
+
+.set-panel {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  display: grid; gap: 12px;
+}
+.set-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+}
+.set-lbl {
+  font-size: .83rem; font-weight: 600;
+  color: var(--muted); flex-shrink: 0;
+  min-width: 76px;
+}
+select {
+  font: inherit; font-size: .84rem;
+  padding: 6px 10px; border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--panel); color: var(--text);
+  min-height: 34px; min-width: 0; flex: 1;
+}
+select:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type="range"] {
+  accent-color: var(--accent);
+  width: 120px; cursor: pointer;
+}
+.thr-val { font-size: .85rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+#model-file-input { display: none; }
+.model-st { font-size: .82rem; color: var(--muted); }
+.model-st.ok  { color: var(--success); }
+.model-st.err { color: var(--danger); }
+.model-st.warn { color: var(--warn); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="page">
+  <!-- Header -->
+  <header class="hdr">
+    <h1>색상 AI 비전 인식 테스트</h1>
+    <p>Teachable Machine 모델로 웹캠 또는 이미지 파일의 색상을 인식합니다.</p>
+  </header>
+
+  <div class="grid">
+    <!-- ── Input panel ── -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-ttl">입력</span>
+        <div class="tabs" role="tablist">
+          <button class="tab-btn active" data-tab="camera" type="button" role="tab" aria-selected="true">📷 웹캠</button>
+          <button class="tab-btn" data-tab="file"   type="button" role="tab" aria-selected="false">🖼️ 파일</button>
         </div>
-        <div class="now">
-          <div class="now-line"><span>AI가 보는 내 손</span><b id="now-label">—</b></div>
-          <div class="meter"><div id="now-meter"></div></div>
-        </div>
-      </section>
-
-      <div class="center">
-        <div class="vs">VS</div>
-        <div id="countdown" aria-live="assertive"></div>
       </div>
 
-      <section class="side cpu" id="side-cpu" aria-label="컴퓨터">
-        <div class="side-head">🤖 COMPUTER <span class="tag">랜덤</span></div>
-        <div class="stage">
-          <div id="cpu-hand">❔</div>
-          <div id="cpu-name">대기 중</div>
+      <div class="card-body">
+        <!-- Camera tab -->
+        <div id="tab-camera" role="tabpanel">
+          <div class="preview-wrap">
+            <div class="preview-ph" id="cam-ph">
+              <div class="ph-icon">📷</div>
+              <p>웹캠 시작을 눌러주세요</p>
+            </div>
+            <video id="video" autoplay muted playsinline hidden aria-label="웹캠 영상"></video>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="cam-start" type="button">📷 웹캠 시작</button>
+            <button class="btn" id="cam-stop" type="button" disabled>⏹ 정지</button>
+          </div>
+          <div class="status-ln" id="cam-status-ln">
+            <span class="sdot" id="cam-dot"></span>
+            <span id="cam-status-tx">웹캠 시작을 눌러주세요.</span>
+          </div>
         </div>
-        <div class="now">
-          <div class="now-line"><span>컴퓨터의 선택</span><b id="cpu-label">—</b></div>
-          <div class="meter"><div id="cpu-meter" style="background:linear-gradient(90deg,var(--cpu),#ffb0c9)"></div></div>
+
+        <!-- File tab -->
+        <div id="tab-file" hidden role="tabpanel">
+          <div class="upload-zone" id="upload-zone">
+            <input type="file" id="img-input" accept="image/*" aria-label="이미지 파일 선택">
+            <div class="uz-icon">📂</div>
+            <div class="uz-label">클릭하거나 파일을 드래그하세요</div>
+            <div class="uz-hint">JPG · PNG · GIF · WebP 지원</div>
+          </div>
+          <div class="file-preview-wrap" id="file-prev-wrap" hidden>
+            <img id="img-preview" src="" alt="업로드된 이미지">
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="analyze-btn" type="button" disabled>🔍 색상 분석</button>
+            <button class="btn" id="clear-btn" type="button" hidden>✕ 초기화</button>
+          </div>
+          <div class="status-ln" id="file-status-ln">
+            <span class="sdot" id="file-dot"></span>
+            <span id="file-status-tx">이미지를 업로드해주세요.</span>
+          </div>
         </div>
-      </section>
+      </div>
     </div>
 
-    <div id="banner" aria-live="polite">
-      <div id="banner-title">준비되면 게임 시작!</div>
-      <p id="banner-sub">웹캠을 켜고 모델이 연결되면 시작할 수 있어요.</p>
+    <!-- ── Results panel ── -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-ttl">인식 결과</span>
+        <div class="live-badge" id="live-badge" hidden>
+          <div class="ldot"></div>
+          <span>실시간</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="res-header">
+          <span>TOP 3 색상</span>
+        </div>
+        <div id="results" role="status" aria-live="polite">
+          <div class="empty-res">
+            <div class="er-icon">🎨</div>
+            <p>모델을 연결하고 이미지를 입력하면<br>색상 인식 결과가 표시됩니다.</p>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <div class="actions">
-      <button id="camera-start" type="button">📷 웹캠 시작</button>
-      <button id="play" class="big" type="button" disabled>▶ 게임 시작</button>
-      <button id="reset" type="button">↺ 처음부터</button>
+  <!-- ── Settings ── -->
+  <div class="settings-sec">
+    <button class="set-toggle" id="set-toggle" type="button" aria-expanded="false" aria-controls="set-panel">
+      ⚙️ 모델 · 카메라 설정
+      <span class="set-arrow" aria-hidden="true">▾</span>
+    </button>
+    <div class="set-panel" id="set-panel" hidden>
+      <p id="model-status" class="model-st">모델 파일을 선택하거나, GitHub model 폴더를 구성해주세요.</p>
+      <div class="set-row">
+        <span class="set-lbl">모델 파일</span>
+        <button class="btn" id="model-btn" type="button">🧠 모델 파일 연결</button>
+        <input type="file" id="model-file-input" accept=".json,.bin" multiple>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">카메라</span>
+        <select id="cam-select" disabled aria-label="카메라 선택"></select>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">확신 기준</span>
+        <input type="range" id="threshold" min="30" max="95" step="5" value="60" aria-label="확신 기준">
+        <strong class="thr-val" id="thr-val" aria-live="polite">60%</strong>
+      </div>
     </div>
+  </div>
 
-    <div class="bottom">
-      <section class="card" aria-labelledby="log-heading">
-        <h2 id="log-heading">📜 라운드 기록</h2>
-        <p id="log-empty">아직 기록이 없어요.</p>
-        <ul id="log"></ul>
-      </section>
-      <section class="card" aria-labelledby="set-heading">
-        <h2 id="set-heading">⚙️ 설정</h2>
-        <p id="status" role="status" aria-live="polite">웹캠 시작을 눌러주세요.</p>
-        <p id="model-status" role="status" aria-live="polite">모델은 GitHub의 model 폴더에서 자동으로 연결됩니다.</p>
-        <div class="setting-row">
-          <select id="camera-select" disabled aria-label="사용할 카메라"><option value="">기본 카메라</option></select>
-          <button id="camera-stop" type="button" disabled>⏹ 정지</button>
+  <noscript><p style="text-align:center;color:#ef4444;margin-top:2rem">JavaScript를 활성화해주세요.</p></noscript>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ── Color definitions ──
+  const COLORS = {
+    Red:    { hex: '#ef4444', label: '빨강', en: 'red' },
+    Orange: { hex: '#f97316', label: '주황', en: 'orange' },
+    Yellow: { hex: '#eab308', label: '노랑', en: 'yellow' },
+    Green:  { hex: '#22c55e', label: '초록', en: 'green' },
+    Blue:   { hex: '#3b82f6', label: '파랑', en: 'blue' },
+    Purple: { hex: '#a855f7', label: '보라', en: 'purple' },
+    Black:  { hex: '#1f2937', label: '검정', en: 'black' },
+    White:  { hex: '#f8fafc', label: '흰색', en: 'white' },
+    Grey:   { hex: '#9ca3af', label: '회색', en: 'grey' },
+  };
+
+  // ── State ──
+  let model = null, modelLoading = false, modelTask = 0, autoAttempted = false;
+  let stream = null, camMode = 'idle'; // 'idle' | 'camera'
+  let inputEpoch = 0, camTimer = null, inference = null;
+  let smoothed = [], labels = [], modelKind = 'image';
+  let lastVideoTime = -1, lastVideoAdv = 0, frameState = 'waiting';
+  let inputMode = 'camera'; // 'camera' | 'file'
+  let uploadedImg = null;
+  const libraryPromises = {};
+
+  // Tiny canvases for inference
+  const probeCanvas = document.createElement('canvas');
+  probeCanvas.width = probeCanvas.height = 32;
+  const probeCtx = probeCanvas.getContext('2d', { willReadFrequently: true });
+
+  const inCtx = (() => { const c = document.createElement('canvas'); c.width = c.height = 400; return c; })();
+  const inCtx2d = inCtx.getContext('2d');
+
+  const $ = id => document.getElementById(id);
+
+  // ── Utilities ──
+  function moveOf(className) {
+    const k = String(className).trim().toLowerCase();
+    for (const [key, info] of Object.entries(COLORS)) {
+      if (info.en === k || key.toLowerCase() === k) return key;
+    }
+    return null;
+  }
+
+  // ── Render top-3 results ──
+  function renderResults(rawPreds, smoothedArr) {
+    const container = $('results');
+    const liveBadge = $('live-badge');
+    liveBadge.hidden = !(inputMode === 'camera' && camMode === 'camera' && model);
+
+    if (!rawPreds || !rawPreds.length) {
+      container.innerHTML = `
+        <div class="empty-res">
+          <div class="er-icon">🎨</div>
+          <p>모델을 연결하고 이미지를 입력하면<br>색상 인식 결과가 표시됩니다.</p>
+        </div>`;
+      return;
+    }
+
+    const preds = rawPreds.map((p, i) => ({
+      className: p.className,
+      probability: smoothedArr ? (smoothedArr[i] ?? p.probability) : p.probability,
+    })).sort((a, b) => b.probability - a.probability).slice(0, 3);
+
+    const items = preds.map((p, rank) => {
+      const key = moveOf(p.className);
+      const info = key ? COLORS[key] : null;
+      const pct = Math.round(Math.max(0, Math.min(1, p.probability)) * 100);
+      const hex = info ? info.hex : '#888888';
+      const label = info ? info.label : p.className;
+      const rankLabels = ['1위', '2위', '3위'];
+      const barColor = (key === 'White') ? '#cbd5e1' : hex;
+
+      return `<div class="res-item${rank === 0 ? ' top' : ''}">
+        <div class="swatch" style="background:${hex}" aria-hidden="true"></div>
+        <div class="res-info">
+          <div class="res-name">
+            ${label}
+            <span class="rank-tag">${rankLabels[rank]}</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${pct}%;background:${barColor}"></div>
+          </div>
         </div>
-        <div class="setting-row">
-          <button id="model-button" type="button">🧠 모델 파일 연결</button>
-          <input id="model-input" type="file" accept=".json,.bin" multiple hidden>
-        </div>
-        <div class="setting-row">
-          <label for="threshold">확신 기준</label><input id="threshold" type="range" min="30" max="95" step="5" value="60"><strong id="threshold-value">60%</strong>
-        </div>
-        <div class="setting-row">
-          <label for="target">승리 조건</label>
-          <select id="target" style="font:inherit;padding:6px 8px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:var(--ink)">
-            <option value="2">3판 2선승</option><option value="3" >5판 3선승</option><option value="1">단판 승부</option>
-          </select>
-          <label style="display:inline-flex;gap:6px;align-items:center;margin-left:auto"><input id="sound-toggle" type="checkbox" checked> 효과음</label>
-        </div>
-        <p style="margin:0;font-size:.8rem;color:var(--muted)">단축키 <b>Space</b> 게임 시작·다음 라운드</p>
-      </section>
-    </div>
-    <noscript><p>이 페이지를 사용하려면 브라우저의 JavaScript를 켜주세요.</p></noscript>
-  </main>
+        <div class="res-pct">${pct}%</div>
+      </div>`;
+    }).join('');
 
-  <script>
-    (() => {
-      "use strict";
-      // =====================================================================
-      // ✏️ 여기를 수정하세요
-      // names: Teachable Machine에서 정한 클래스 이름(여러 개 가능, 대소문자 무시)
-      // =====================================================================
-      const PAGE_TITLE = "AI 가위바위보 대결";
-      const MOVES = {
-        Red: { names: ["Red"], emoji: "🔴", label: "빨강" },
-        Orange:     { names: ["Orange"], emoji: "🟠", label: "주황" },
-        Yellow:    { names: ["Yellow"], emoji: "🟡", label: "노랑" }
-        Green:    { names: ["Green"], emoji: "🟢", label: "초록" }
-        Blue:    { names: ["Blue"], emoji: "🔵", label: "파랑" }
-        Purple:    { names: ["Purple"], emoji: "🟣", label: "보라" }
-        Black:    { names: ["Black"], emoji: "⚫️", label: "검정" }
-        White:    { names: ["White"], emoji: "⚪️", label: "흰색" }
-        Grey:    { names: ["Grey"], emoji: "🔘", label: "회색" }
-      };
-      const COUNT_WORDS = ["가위", "바위", "보!"];   // 카운트다운 구호
-      const COUNT_MS = 650;                          // 구호 사이 간격(ms)
-      // =====================================================================
+    container.innerHTML = `<div class="res-list">${items}</div>`;
+  }
 
-      const BEATS = { rock: "scissors", scissors: "paper", paper: "rock" };
-      const MODEL_BASE = "./model/";
-      const MIRROR_CAMERA = true;
-      const $ = (id) => document.getElementById(id);
-      const video = $("video");
-      const inputCanvas = document.createElement("canvas");
-      inputCanvas.width = inputCanvas.height = 400;
-      const inputCtx = inputCanvas.getContext("2d");
-      const frameProbe = document.createElement("canvas");
-      frameProbe.width = frameProbe.height = 32;
-      const probeCtx = frameProbe.getContext("2d", { willReadFrequently: true });
-      const cameraSelect = $("camera-select");
-      let stream = null, opening = false, mode = "idle", inputEpoch = 0;
-      let cameraTimer = null, cameraHint = null, inference = null;
-      let model = null, modelLoading = false, modelTask = 0, autoAttempted = false;
-      let modelKind = "image"; const libraryPromises = {}; // "image" = 이미지 프로젝트, "pose" = 포즈 프로젝트
-      const skeletonCtx = $("skeleton").getContext("2d");
-      let frameState = "waiting", frameStateSince = 0, frameMessage = "";
-      let cameraName = "카메라", lastVideoTime = -1, lastVideoAdvance = 0;
-      let smoothed = [], labels = [], current = null; // current = { move, className, percent }
-      // 게임 상태
-      let phase = "idle", round = 1, youScore = 0, cpuScore = 0;
-      document.title = PAGE_TITLE;
-      $("page-title").textContent = PAGE_TITLE;
-      video.style.transform = MIRROR_CAMERA ? "scaleX(-1)" : "none";
+  // ── Library loading ──
+  const LIBS = {
+    image: ['tmImage', '@teachablemachine/image@0.8.5/dist/teachablemachine-image.min.js'],
+    pose:  ['tmPose',  '@teachablemachine/pose@0.8.6/dist/teachablemachine-pose.min.js'],
+  };
 
-      const target = () => Number($("target").value);
-      const threshold = () => Number($("threshold").value);
-      $("threshold").addEventListener("input", () => { $("threshold-value").textContent = threshold() + "%"; });
-      function moveOf(className) {
-        const key = String(className).trim().toLowerCase();
-        for (const [move, info] of Object.entries(MOVES)) if (info.names.some((n) => n.toLowerCase() === key)) return move;
-        return null;
-      }
+  function loadScript(url) {
+    return new Promise((res, rej) => {
+      const s = document.createElement('script'); s.src = url; s.async = true;
+      const t = setTimeout(() => { s.remove(); rej(new Error('스크립트 로드 시간 초과')); }, 14000);
+      s.onload = () => { clearTimeout(t); res(); };
+      s.onerror = () => { clearTimeout(t); s.remove(); rej(new Error('스크립트 로드 실패')); };
+      document.head.append(s);
+    });
+  }
 
-      // ---------- 효과음 ----------
-      let audioCtx = null;
-      function tone(freq, length = 0.15, type = "square", delay = 0, volume = 0.12) {
-        if (!$("sound-toggle").checked) return;
-        try {
-          audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-          const t = audioCtx.currentTime + delay;
-          const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-          osc.type = type; osc.frequency.setValueAtTime(freq, t);
-          gain.gain.setValueAtTime(0.0001, t);
-          gain.gain.exponentialRampToValueAtTime(volume, t + 0.01);
-          gain.gain.exponentialRampToValueAtTime(0.0001, t + length);
-          osc.connect(gain).connect(audioCtx.destination);
-          osc.start(t); osc.stop(t + length + 0.02);
-        } catch {}
+  async function ensureLibraries(kind) {
+    const [g] = LIBS[kind];
+    if (window.tf && window[g]) return;
+    if (!libraryPromises[kind]) libraryPromises[kind] = (async () => {
+      for (const [name, file] of [['tf', '@tensorflow/tfjs@1.3.1/dist/tf.min.js'], LIBS[kind]]) {
+        if (window[name]) continue;
+        try { await loadScript('https://cdn.jsdelivr.net/npm/' + file); }
+        catch { await loadScript('https://unpkg.com/' + file); }
+        if (!window[name]) throw new Error('AI 라이브러리 초기화 실패');
       }
-      const sfx = {
-        tick: () => tone(660, 0.12),
-        go: () => tone(990, 0.22),
-        win: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.18, "triangle", i * 0.11)),
-        lose: () => [392, 330, 262].forEach((f, i) => tone(f, 0.22, "sawtooth", i * 0.14, 0.08)),
-        draw: () => [440, 440].forEach((f, i) => tone(f, 0.12, "sine", i * 0.15)),
-        champion: () => [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, 0.2, "triangle", i * 0.12))
-      };
-
-      // ---------- 꽃가루 ----------
-      const confettiCanvas = $("confetti"), cctx = confettiCanvas.getContext("2d");
-      let particles = [], confettiRunning = false;
-      function confetti() {
-        confettiCanvas.width = innerWidth; confettiCanvas.height = innerHeight;
-        const colors = ["#ffd23f", "#2ee6a6", "#ff4f8b", "#8fb8ff", "#ffffff"];
-        for (let i = 0; i < 160; i++) particles.push({
-          x: innerWidth / 2 + (Math.random() - .5) * 200, y: innerHeight * .35,
-          vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4, size: 6 + Math.random() * 6,
-          color: colors[i % colors.length], rot: Math.random() * 6, life: 0
-        });
-        if (!confettiRunning) { confettiRunning = true; requestAnimationFrame(stepConfetti); }
-      }
-      function stepConfetti() {
-        cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
-        particles.forEach((p) => {
-          p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.rot += 0.15; p.life++;
-          cctx.save(); cctx.translate(p.x, p.y); cctx.rotate(p.rot);
-          cctx.fillStyle = p.color; cctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2); cctx.restore();
-        });
-        particles = particles.filter((p) => p.y < innerHeight + 40 && p.life < 300);
-        if (particles.length) requestAnimationFrame(stepConfetti);
-        else { confettiRunning = false; cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height); }
-      }
-
-      // ---------- 화면 갱신 ----------
-      function status(message, error = false) { $("status").textContent = message; $("status").classList.toggle("error", error); }
-      function modelStatus(message, error = false) { $("model-status").textContent = message; $("model-status").classList.toggle("error", error); }
-      function banner(title, sub = "", kind = "") {
-        $("banner").className = kind; void $("banner").offsetWidth; if (kind) $("banner").classList.add("flash");
-        $("banner-title").textContent = title; $("banner-sub").textContent = sub;
-      }
-      function renderScore() {
-        $("you-score").textContent = youScore; $("cpu-score").textContent = cpuScore;
-        const pips = (el, n) => { el.replaceChildren(...Array.from({ length: target() }, (_, i) => { const d = document.createElement("span"); d.className = "pip" + (i < n ? " on" : ""); return d; })); };
-        pips($("you-pips"), youScore); pips($("cpu-pips"), cpuScore);
-        const rule = { 1: "단판 승부", 2: "3판 2선승", 3: "5판 3선승" }[target()];
-        $("round-label").firstChild.textContent = phase === "over" ? "GAME OVER" : "ROUND " + round;
-        $("rule-label").textContent = rule;
-      }
-      function buttons() {
-        $("camera-start").disabled = opening || Boolean(stream);
-        $("camera-stop").disabled = !opening && mode === "idle";
-        cameraSelect.disabled = opening || cameraSelect.options.length < 2;
-        const ready = mode === "camera" && model && !modelLoading;
-        $("play").disabled = !ready || phase === "countdown";
-        $("play").textContent = phase === "over" ? "🏆 다시 대결" : phase === "reveal" ? "▶ 다음 라운드" : "▶ 게임 시작";
-        $("target").disabled = phase === "countdown" || phase === "reveal";
-      }
-      function showNow() {
-        if (!current) { $("now-label").textContent = "—"; $("now-meter").style.width = "0%"; return; }
-        const info = MOVES[current.move];
-        const sure = current.move && current.percent >= threshold();
-        $("now-label").textContent = sure ? info.emoji + " " + info.label + " " + current.percent.toFixed(0) + "%" : "🤔 " + current.className + " " + current.percent.toFixed(0) + "%";
-        $("now-meter").style.width = current.percent + "%";
-      }
-
-      // ---------- 카메라 · 모델 (기존 구조 유지) ----------
-      function resetInput() {
-        inputEpoch++;
-        clearTimeout(cameraTimer); clearTimeout(cameraHint); cameraTimer = cameraHint = null;
-        if (stream) stream.getTracks().forEach((track) => track.stop());
-        stream = null; opening = false;
-        frameState = "waiting"; frameStateSince = 0; frameMessage = "";
-        lastVideoTime = -1; lastVideoAdvance = 0;
-        video.pause(); video.srcObject = null; video.hidden = true;
-        $("frame").hidden = true; $("placeholder").hidden = false;
-        mode = "idle"; smoothed = []; current = null; showNow(); skeletonCtx.clearRect(0, 0, 400, 400);
-        if (phase === "countdown") cancelRound("카메라가 꺼져서 라운드를 취소했어요.");
-        buttons();
-      }
-      function dispose(candidate) { candidate?.model?.dispose?.(); }
-      async function refreshCameras(epoch = inputEpoch) {
-        if (!navigator.mediaDevices?.enumerateDevices) return;
-        try {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          if (epoch !== inputEpoch) return;
-          const selected = stream?.getVideoTracks()[0]?.getSettings?.().deviceId || cameraSelect.value;
-          cameraSelect.replaceChildren();
-          const def = document.createElement("option"); def.value = ""; def.textContent = "브라우저 기본 카메라"; cameraSelect.append(def);
-          devices.filter((d) => d.kind === "videoinput" && d.deviceId).forEach((d, i) => {
-            const o = document.createElement("option"); o.value = d.deviceId; o.textContent = d.label || "카메라 " + (i + 1); cameraSelect.append(o);
-          });
-          cameraSelect.value = Array.from(cameraSelect.options).some((o) => o.value === selected) ? selected : "";
-          buttons();
-        } catch {}
-      }
-      function isDarkUniformFrame(pixels) {
-        let sum = 0, squares = 0, maximum = 0; const count = pixels.length / 4;
-        if (!count) return false;
-        for (let i = 0; i < pixels.length; i += 4) {
-          const b = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
-          sum += b; squares += b * b; maximum = Math.max(maximum, b);
-        }
-        const mean = sum / count;
-        return mean < 45 && maximum < 60 && Math.max(0, squares / count - mean * mean) < 20;
-      }
-      function inspectCameraFrame() {
-        const track = stream?.getVideoTracks()[0]; const now = performance.now();
-        if (!track || track.readyState === "ended" || track.muted || !track.enabled) return "waiting";
-        if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) return "waiting";
-        if (video.currentTime !== lastVideoTime) { lastVideoTime = video.currentTime; lastVideoAdvance = now; }
-        if (video.paused || now - lastVideoAdvance > 5000) return "waiting";
-        try { probeCtx.drawImage(video, 0, 0, 32, 32); return isDarkUniformFrame(probeCtx.getImageData(0, 0, 32, 32).data) ? "dark" : "ready"; }
-        catch { return "unreadable"; }
-      }
-      function reportCameraFrame(next) {
-        const now = performance.now();
-        if (next !== frameState) { frameState = next; frameStateSince = now; }
-        let message;
-        if (next === "ready") message = cameraName + " · 영상이 들어오고 있습니다.";
-        else {
-          current = null; showNow();
-          if (now - frameStateSince < 2000) message = cameraName + " · 카메라 영상을 확인하고 있습니다.";
-          else if (next === "dark") message = "영상이 매우 어둡습니다. 카메라 가림막이나 차단 키를 확인하거나 다른 카메라를 선택하세요.";
-          else if (next === "unreadable") message = "카메라 영상을 읽지 못했습니다. 정지 후 다시 시작해주세요.";
-          else message = "새 영상이 들어오지 않습니다. 카메라 차단 설정을 확인하거나 다른 카메라를 선택하세요.";
-        }
-        if (message !== frameMessage) { frameMessage = message; status(message, next !== "ready" && now - frameStateSince >= 2000); }
-      }
-      function loadScript(url) {
-        return new Promise((resolve, reject) => {
-          const s = document.createElement("script"); s.src = url; s.async = true;
-          const timeout = setTimeout(() => finish(new Error("다운로드 시간 초과")), 12000);
-          function finish(error) { clearTimeout(timeout); s.onload = s.onerror = null; if (error) { s.remove(); reject(error); } else resolve(); }
-          s.onload = () => finish(); s.onerror = () => finish(new Error("AI 라이브러리 다운로드 실패"));
-          document.head.append(s);
-        });
-      }
-      // 이미지 모델과 포즈 모델은 서로 다른 라이브러리를 씁니다.
-      const LIBS = {
-        image: ["tmImage", "@teachablemachine/image@0.8.5/dist/teachablemachine-image.min.js"],
-        pose:  ["tmPose",  "@teachablemachine/pose@0.8.6/dist/teachablemachine-pose.min.js"]
-      };
-      async function ensureLibraries(kind) {
-        const [globalName] = LIBS[kind];
-        if (window.tf && window[globalName]) return;
-        if (!libraryPromises[kind]) libraryPromises[kind] = (async () => {
-          for (const [g, file] of [["tf", "@tensorflow/tfjs@1.3.1/dist/tf.min.js"], LIBS[kind]]) {
-            if (window[g]) continue;
-            try { await loadScript("https://cdn.jsdelivr.net/npm/" + file); }
-            catch { if (!window[g]) await loadScript("https://unpkg.com/" + file); }
-            if (!window[g]) throw new Error("AI 라이브러리 초기화 실패");
-          }
-        })();
-        try { await libraryPromises[kind]; }
-        catch { libraryPromises[kind] = null; throw new Error("AI 실행 도구를 불러오지 못했습니다. 인터넷 연결이나 학교 네트워크 차단 여부를 확인해주세요."); }
-      }
-      // metadata.json을 읽어 이미지 모델인지 포즈 모델인지 판단합니다.
-      function kindOf(meta) {
-        const text = JSON.stringify(meta || {}).toLowerCase();
-        return text.includes("teachablemachine/pose") || meta?.modelSettings?.posenet ? "pose" : "image";
-      }
-      async function readMeta(fileOrUrl) {
-        try {
-          if (typeof fileOrUrl === "string") { const r = await fetch(fileOrUrl, { cache: "no-store" }); return r.ok ? await r.json() : null; }
-          return JSON.parse(await fileOrUrl.text());
-        } catch { return null; }
-      }
-      async function connectModel(files) {
-        const task = ++modelTask; modelLoading = true; autoAttempted = true;
-        const previous = model; model = null; buttons();
-        modelStatus("학습 모델을 연결하는 중입니다…");
-        let candidate = null;
-        try {
-          if (inference) await inference.catch(() => {});
-          dispose(previous);
-          if (task !== modelTask) return;
-          if (!files && location.protocol === "file:") throw new Error("'모델 파일 연결'을 눌러 model.json, metadata.json, weights.bin을 함께 선택해주세요.");
-          let topology, metadata, weights;
-          if (files) {
-            topology = files.find((f) => f.name === "model.json");
-            metadata = files.find((f) => f.name === "metadata.json");
-            weights = files.filter((f) => f.name.endsWith(".bin"));
-            if (!topology || !metadata || weights.length !== 1) throw new Error("model.json, metadata.json, 가중치(.bin) 파일 1개를 한 번에 선택해주세요.");
-          }
-          let kind = "image";
-          if (files) kind = kindOf(await readMeta(metadata));
-          else {
-            for (const base of [...new Set([MODEL_BASE, "./"])]) {
-              const meta = await readMeta(base + "metadata.json");
-              if (meta) { kind = kindOf(meta); break; }
-            }
-          }
-          await ensureLibraries(kind);
-          if (task !== modelTask) return;
-          const lib = kind === "pose" ? window.tmPose : window.tmImage;
-          if (files) candidate = await lib.loadFromFiles(topology, weights[0], metadata);
-          else {
-            for (const base of [...new Set([MODEL_BASE, "./"])]) {
-              try { candidate = await lib.load(base + "model.json", base + "metadata.json"); break; }
-              catch (error) { console.warn("모델 경로 확인:", base, error); }
-            }
-            if (!candidate) throw new Error("학습 모델을 찾지 못했습니다. '모델 파일 연결'로 파일 3개를 선택하거나 GitHub의 model 폴더를 확인해주세요.");
-          }
-          if (task !== modelTask) { dispose(candidate); return; }
-          const modelLabels = candidate.getClassLabels();
-          if (!Array.isArray(modelLabels) || !modelLabels.length) throw new Error("분류 이름이 없는 모델입니다.");
-          const missing = Object.keys(MOVES).filter((m) => !modelLabels.some((l) => moveOf(l) === m));
-          model = candidate; labels = modelLabels; smoothed = []; modelKind = kind;
-          $("skeleton").hidden = kind !== "pose";
-          skeletonCtx.clearRect(0, 0, 400, 400);
-          modelLoading = false;
-          if (missing.length) modelStatus("⚠️ 연결은 됐지만 " + missing.map((m) => MOVES[m].label).join("·") + " 클래스를 찾지 못했어요. 클래스 이름: " + modelLabels.join(" / ") + " → 코드 맨 위 MOVES를 수정하세요.", true);
-          else modelStatus("✅ " + (kind === "pose" ? "포즈 모델" : "이미지 모델") + " 연결 완료 · " + modelLabels.join(" / "));
-          if (mode === "camera") banner("준비 완료!", kind === "pose"
-            ? "포즈 모델은 손가락이 아니라 팔·몸 동작을 읽어요. 1~2m 떨어져 상체가 보이게 서세요."
-            : "'게임 시작'을 누르거나 Space 키를 누르세요.");
-        } catch (error) {
-          if (candidate && candidate !== model) dispose(candidate);
-          if (task === modelTask) { console.error(error); modelStatus(error.message || "모델을 연결하지 못했습니다.", true); }
-        } finally { if (task === modelTask) modelLoading = false; buttons(); }
-      }
-      function crop(source, width, height, mirror, targetCtx) {
-        if (!width || !height) return false;
-        const side = Math.min(width, height), size = targetCtx.canvas.width;
-        targetCtx.save(); targetCtx.clearRect(0, 0, size, size);
-        if (mirror) { targetCtx.translate(size, 0); targetCtx.scale(-1, 1); }
-        targetCtx.drawImage(source, (width - side) / 2, (height - side) / 2, side, side, 0, 0, size, size);
-        targetCtx.restore();
-        return true;
-      }
-      async function classify(epoch) {
-        if (!model || modelLoading || inference || epoch !== inputEpoch || frameState !== "ready") return;
-        const activeModel = model, activeTask = modelTask;
-        if (!(video.readyState >= 2 && crop(video, video.videoWidth, video.videoHeight, MIRROR_CAMERA, inputCtx))) return;
-        const job = Promise.resolve().then(async () => {
-          if (modelKind !== "pose") return activeModel.predict(inputCanvas);
-          // 포즈 모델: 먼저 몸의 관절을 찾고, 그 관절 정보로 동작을 분류합니다.
-          const { pose, posenetOutput } = await activeModel.estimatePose(inputCanvas);
-          skeletonCtx.clearRect(0, 0, 400, 400);
-          if (pose && window.tmPose) {
-            tmPose.drawKeypoints(pose.keypoints, 0.5, skeletonCtx, 6, "#2ee6a6", "#ffffff");
-            tmPose.drawSkeleton(pose.keypoints, 0.5, skeletonCtx, 4, "#2ee6a6");
-          }
-          return activeModel.predict(posenetOutput);
-        });
-        inference = job;
-        try {
-          const predictions = await job;
-          if (epoch !== inputEpoch || activeModel !== model || activeTask !== modelTask) return;
-          if (!predictions.length || predictions.some((p) => !Number.isFinite(p.probability))) throw new Error("올바른 분류 결과를 받지 못했습니다.");
-          predictions.forEach((p, i) => { const v = Math.max(0, Math.min(1, p.probability)); smoothed[i] = smoothed[i] === undefined ? v : smoothed[i] * 0.5 + v * 0.5; });
-          let best = 0; smoothed.forEach((v, i) => { if (v > smoothed[best]) best = i; });
-          current = { move: moveOf(predictions[best].className), className: predictions[best].className, percent: smoothed[best] * 100 };
-          showNow();
-        } catch (error) {
-          if (epoch === inputEpoch && activeTask === modelTask) { model = null; dispose(activeModel); const msg = /dimension|shape/i.test(error.message || "") ? "모델 종류와 페이지가 맞지 않습니다. 모델을 다시 연결해주세요." : (error.message || "모델을 다시 연결해주세요.");
-            modelStatus("AI 분석 오류: " + msg, true); buttons(); }
-        } finally { if (inference === job) inference = null; }
-      }
-      async function cameraLoop(epoch) {
-        if (epoch !== inputEpoch || mode !== "camera" || !stream) return;
-        reportCameraFrame(inspectCameraFrame());
-        if (frameState === "ready") await classify(epoch);
-        if (epoch === inputEpoch && mode === "camera") cameraTimer = setTimeout(() => cameraLoop(epoch), 120);
-      }
-      function cameraError(error) {
-        return ({
-          NotAllowedError: "카메라 사용이 차단되었습니다. 주소창 왼쪽 사이트 설정에서 카메라를 허용해주세요.",
-          NotFoundError: "연결된 카메라를 찾지 못했습니다. 웹캠 연결을 확인해주세요.",
-          NotReadableError: "카메라를 열 수 없습니다. Zoom·Teams·카메라 앱 등에서 사용 중인지 확인해주세요.",
-          OverconstrainedError: "선택한 카메라를 사용할 수 없습니다. 다른 카메라를 선택해주세요.",
-          SecurityError: "이 페이지에서 카메라 접근이 제한되었습니다. HTTPS 주소로 접속해주세요."
-        })[error.name] || error.message || "카메라를 시작하지 못했습니다.";
-      }
-      async function startCamera() {
-        const deviceId = cameraSelect.value;
-        resetInput();
-        const epoch = inputEpoch;
-        opening = true; buttons();
-        try {
-          if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) throw new Error("이 화면에서는 카메라를 사용할 수 없습니다. GitHub Pages 주소를 Chrome 또는 Edge 새 창으로 열어주세요.");
-          status("브라우저의 카메라 사용 요청에서 '허용'을 눌러주세요.");
-          cameraHint = setTimeout(() => { if (epoch === inputEpoch && opening) status("카메라 응답을 기다리고 있습니다. 주소창 옆 카메라 권한을 확인해주세요."); }, 15000);
-          const acquired = await navigator.mediaDevices.getUserMedia({ video: deviceId ? { deviceId: { exact: deviceId } } : true, audio: false });
-          if (epoch !== inputEpoch) { acquired.getTracks().forEach((t) => t.stop()); return; }
-          stream = acquired; mode = "camera";
-          cameraName = stream.getVideoTracks()[0]?.label || "카메라";
-          frameStateSince = performance.now();
-          void refreshCameras(epoch);
-          video.hidden = false; $("frame").hidden = false; $("placeholder").hidden = true;
-          video.srcObject = stream;
-          await video.play();
-          if (epoch !== inputEpoch) return;
-          clearTimeout(cameraHint); opening = false; buttons();
-          for (const track of stream.getVideoTracks()) track.addEventListener("ended", () => { if (epoch === inputEpoch) { resetInput(); status("카메라 연결이 종료되었습니다.", true); } });
-          if (!model && !modelLoading && !autoAttempted) void connectModel();
-          else if (model) banner("준비 완료!", "'게임 시작'을 누르거나 Space 키를 누르세요.");
-          void cameraLoop(epoch);
-        } catch (error) { if (epoch === inputEpoch) { resetInput(); status(cameraError(error), true); } }
-      }
-
-      // ---------- 게임 ----------
-      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-      let roundToken = 0;
-      function setCpu(move, shaking = false) {
-        $("cpu-hand").textContent = move ? MOVES[move].emoji : "❔";
-        $("cpu-hand").classList.toggle("shake", shaking);
-        $("cpu-name").textContent = move && !shaking ? MOVES[move].label : shaking ? "고르는 중…" : "대기 중";
-        $("cpu-label").textContent = move && !shaking ? MOVES[move].emoji + " " + MOVES[move].label : "—";
-        $("cpu-meter").style.width = move && !shaking ? "100%" : "0%";
-      }
-      function clearHighlights() { $("side-you").classList.remove("win"); $("side-cpu").classList.remove("win"); $("you-lock").hidden = true; }
-      function cancelRound(message) { roundToken++; phase = "idle"; $("countdown").textContent = ""; setCpu(null); banner("라운드 취소", message); buttons(); }
-      async function playRound() {
-        if (phase === "over") resetGame(false);
-        if (!model || mode !== "camera") return;
-        const token = ++roundToken;
-        phase = "countdown"; clearHighlights(); buttons(); renderScore();
-        banner("ROUND " + round, "손을 점선 안에 준비하세요!");
-        const order = Object.keys(MOVES); let shuffle = 0;
-        const shuffler = setInterval(() => setCpu(order[shuffle++ % 3], true), 90);
-        for (const word of COUNT_WORDS) {
-          if (token !== roundToken) { clearInterval(shuffler); return; }
-          $("countdown").textContent = word;
-          $("countdown").classList.remove("pop"); void $("countdown").offsetWidth; $("countdown").classList.add("pop");
-          word === COUNT_WORDS[COUNT_WORDS.length - 1] ? sfx.go() : sfx.tick();
-          await wait(COUNT_MS);
-        }
-        await wait(150); // '보!' 직후 손을 내밀 시간
-        clearInterval(shuffler);
-        if (token !== roundToken) return;
-        const cpu = order[Math.floor(Math.random() * order.length)];
-        setCpu(cpu);
-        const mine = current;
-        $("countdown").textContent = "";
-        if (!mine || !mine.move || mine.percent < threshold()) {
-          phase = "reveal"; buttons();
-          $("you-lock").hidden = false; $("you-lock").textContent = "🤔 인식 실패";
-          banner("다시!", "AI가 손 모양을 확신하지 못했어요(" + (mine ? mine.className + " " + mine.percent.toFixed(0) + "%" : "인식 없음") + "). 이번 판은 무효예요.", "draw");
-          addLog(null, cpu, "무효");
-          return;
-        }
-        $("you-lock").hidden = false; $("you-lock").textContent = MOVES[mine.move].emoji + " " + MOVES[mine.move].label + " " + mine.percent.toFixed(0) + "%";
-        let result;
-        if (mine.move === cpu) { result = "draw"; sfx.draw(); banner("무승부!", MOVES[mine.move].label + " vs " + MOVES[cpu].label + " · 한 번 더!", "draw"); }
-        else if (BEATS[mine.move] === cpu) { result = "win"; youScore++; $("side-you").classList.add("win"); sfx.win(); banner("승리! 🎉", MOVES[mine.move].label + "(이)가 " + MOVES[cpu].label + "을(를) 이겼어요.", "win"); }
-        else { result = "lose"; cpuScore++; $("side-cpu").classList.add("win"); sfx.lose(); banner("패배… 😵", MOVES[cpu].label + "에 졌어요. 다시 도전!", "lose"); }
-        addLog(mine.move, cpu, { win: "승", lose: "패", draw: "무" }[result], result);
-        if (result !== "draw") round++;
-        if (youScore >= target() || cpuScore >= target()) {
-          phase = "over";
-          if (youScore > cpuScore) { banner("🏆 최종 승리!", youScore + " : " + cpuScore + " · AI를 잘 학습시켰네요!", "win"); confetti(); setTimeout(sfx.champion, 600); }
-          else banner("💀 최종 패배", youScore + " : " + cpuScore + " · 다시 대결해볼까요?", "lose");
-        } else phase = "reveal";
-        renderScore(); buttons();
-      }
-      function addLog(mine, cpu, text, kind = "draw") {
-        $("log-empty").hidden = true;
-        const li = document.createElement("li");
-        const r = document.createElement("span"); r.className = "r"; r.textContent = "R" + round;
-        const vs = document.createElement("span");
-        vs.textContent = (mine ? MOVES[mine].emoji + " " + MOVES[mine].label : "🤔 인식 실패") + "  vs  " + MOVES[cpu].emoji + " " + MOVES[cpu].label;
-        const res = document.createElement("span"); res.className = "res " + kind; res.textContent = text;
-        li.append(r, vs, res);
-        $("log").prepend(li);
-      }
-      function resetGame(clearLog = true) {
-        roundToken++; phase = "idle"; round = 1; youScore = cpuScore = 0;
-        clearHighlights(); setCpu(null); $("countdown").textContent = "";
-        if (clearLog) { $("log").replaceChildren(); $("log-empty").hidden = false; }
-        banner(model && mode === "camera" ? "준비 완료!" : "준비되면 게임 시작!", model && mode === "camera" ? "'게임 시작'을 누르거나 Space 키를 누르세요." : "웹캠을 켜고 모델이 연결되면 시작할 수 있어요.");
-        renderScore(); buttons();
-      }
-
-      // ---------- 이벤트 ----------
-      $("camera-start").addEventListener("click", () => { void startCamera(); });
-      cameraSelect.addEventListener("change", () => { if (mode === "camera" || opening) void startCamera(); });
-      $("camera-stop").addEventListener("click", () => { resetInput(); status("카메라를 정지했습니다."); });
-      $("model-button").addEventListener("click", () => $("model-input").click());
-      $("model-input").addEventListener("change", () => {
-        const files = Array.from($("model-input").files); $("model-input").value = "";
-        if (files.length) void connectModel(files);
-      });
-      $("play").addEventListener("click", () => { void playRound(); });
-      $("reset").addEventListener("click", () => resetGame(true));
-      $("target").addEventListener("change", () => resetGame(true));
-      document.addEventListener("keydown", (e) => {
-        if (e.target.closest("input, select, textarea, button") || e.ctrlKey || e.metaKey || e.altKey) return;
-        if (e.code === "Space") { e.preventDefault(); if (!$("play").disabled) $("play").click(); }
-      });
-      window.addEventListener("pagehide", resetInput);
-      navigator.mediaDevices?.addEventListener?.("devicechange", () => { void refreshCameras(); });
-      renderScore(); buttons();
     })();
-  </script>
-</body>
-</html>
+    try { await libraryPromises[kind]; }
+    catch { libraryPromises[kind] = null; throw new Error('AI 실행 도구를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.'); }
+  }
+
+  function kindOf(meta) {
+    const t = JSON.stringify(meta || {}).toLowerCase();
+    return (t.includes('teachablemachine/pose') || meta?.modelSettings?.posenet) ? 'pose' : 'image';
+  }
+
+  async function readMeta(src) {
+    try {
+      if (typeof src === 'string') { const r = await fetch(src, { cache: 'no-store' }); return r.ok ? await r.json() : null; }
+      return JSON.parse(await src.text());
+    } catch { return null; }
+  }
+
+  function setModelStatus(text, state = '') {
+    const el = $('model-status');
+    el.textContent = text;
+    el.className = 'model-st' + (state ? ' ' + state : '');
+  }
+
+  // ── Model connection ──
+  async function connectModel(files) {
+    const task = ++modelTask; modelLoading = true; autoAttempted = true;
+    const prev = model; model = null; labels = []; smoothed = [];
+    setModelStatus('모델 연결 중…');
+    let candidate = null;
+    try {
+      if (inference) await inference.catch(() => {});
+      prev?.model?.dispose?.();
+      if (task !== modelTask) return;
+
+      if (!files && location.protocol === 'file:')
+        throw new Error("'모델 파일 연결'을 눌러 model.json, metadata.json, weights.bin 파일을 함께 선택해주세요.");
+
+      let kind = 'image';
+      if (files) {
+        const topology  = files.find(f => f.name === 'model.json');
+        const metadata  = files.find(f => f.name === 'metadata.json');
+        const weights   = files.filter(f => f.name.endsWith('.bin'));
+        if (!topology || !metadata || weights.length !== 1)
+          throw new Error('model.json, metadata.json, 가중치(.bin) 파일 1개를 한 번에 선택해주세요.');
+        kind = kindOf(await readMeta(metadata));
+        await ensureLibraries(kind);
+        if (task !== modelTask) return;
+        const lib = kind === 'pose' ? window.tmPose : window.tmImage;
+        candidate = await lib.loadFromFiles(topology, weights[0], metadata);
+      } else {
+        for (const base of ['./model/', './']) {
+          const meta = await readMeta(base + 'metadata.json');
+          if (meta) { kind = kindOf(meta); break; }
+        }
+        await ensureLibraries(kind);
+        if (task !== modelTask) return;
+        const lib = kind === 'pose' ? window.tmPose : window.tmImage;
+        for (const base of ['./model/', './']) {
+          try { candidate = await lib.load(base + 'model.json', base + 'metadata.json'); break; }
+          catch (err) { console.warn('모델 경로:', base, err); }
+        }
+        if (!candidate) throw new Error("모델을 찾지 못했습니다. '모델 파일 연결'로 파일 3개를 선택해주세요.");
+      }
+
+      if (task !== modelTask) { candidate?.model?.dispose?.(); return; }
+
+      const mLabels = candidate.getClassLabels();
+      if (!Array.isArray(mLabels) || !mLabels.length) throw new Error('분류 이름이 없는 모델입니다.');
+
+      model = candidate; labels = mLabels; modelKind = kind; modelLoading = false;
+
+      const missing = Object.keys(COLORS).filter(m => !mLabels.some(l => moveOf(l) === m));
+      if (missing.length) {
+        setModelStatus(`⚠️ 연결됨 · ${missing.map(m => COLORS[m].label).join('·')} 클래스 없음 · (${mLabels.join(' / ')})`, 'warn');
+      } else {
+        setModelStatus(`✅ 모델 연결 완료 · ${(kind === 'pose' ? '포즈' : '이미지')} 모델 · ${mLabels.join(' / ')}`, 'ok');
+      }
+
+      // auto-analyze if file is loaded
+      updateAnalyzeBtn();
+      if (inputMode === 'file' && uploadedImg) {
+        await analyzeFileImage();
+      }
+    } catch (e) {
+      if (task === modelTask) {
+        model = null; modelLoading = false;
+        setModelStatus('❌ ' + (e.message || '모델 연결 실패'), 'err');
+      }
+    } finally {
+      if (task === modelTask) modelLoading = false;
+    }
+  }
+
+  // ── Camera status helpers ──
+  function camStatus(text, dotState = '', isErr = false) {
+    $('cam-status-tx').textContent = text;
+    $('cam-dot').className = 'sdot' + (dotState ? ' ' + dotState : '');
+    $('cam-status-ln').className = 'status-ln' + (isErr ? ' err-line' : '');
+  }
+
+  function isDarkFrame(pixels) {
+    let sum = 0, max = 0; const n = pixels.length / 4;
+    if (!n) return false;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const b = (pixels[i] + pixels[i+1] + pixels[i+2]) / 3;
+      sum += b; max = Math.max(max, b);
+    }
+    return (sum / n < 45) && max < 60;
+  }
+
+  function inspectFrame() {
+    const vid = $('video');
+    const track = stream?.getVideoTracks()[0];
+    if (!track || track.readyState === 'ended' || track.muted) return 'waiting';
+    if (vid.readyState < 2 || !vid.videoWidth) return 'waiting';
+    if (vid.currentTime !== lastVideoTime) { lastVideoTime = vid.currentTime; lastVideoAdv = performance.now(); }
+    if (vid.paused || performance.now() - lastVideoAdv > 5000) return 'waiting';
+    try {
+      probeCtx.drawImage(vid, 0, 0, 32, 32);
+      return isDarkFrame(probeCtx.getImageData(0, 0, 32, 32).data) ? 'dark' : 'ready';
+    } catch { return 'unreadable'; }
+  }
+
+  // ── Camera inference loop ──
+  async function classifyFrame(epoch) {
+    if (!model || modelLoading || inference || epoch !== inputEpoch || frameState !== 'ready') return;
+    const vid = $('video');
+    if (!(vid.readyState >= 2 && vid.videoWidth)) return;
+
+    const s = Math.min(vid.videoWidth, vid.videoHeight);
+    inCtx2d.save(); inCtx2d.clearRect(0, 0, 400, 400);
+    inCtx2d.translate(400, 0); inCtx2d.scale(-1, 1); // mirror
+    inCtx2d.drawImage(vid, (vid.videoWidth-s)/2, (vid.videoHeight-s)/2, s, s, 0, 0, 400, 400);
+    inCtx2d.restore();
+
+    const activeModel = model, activeTask = modelTask;
+    const job = modelKind === 'pose'
+      ? activeModel.estimatePose(inCtx).then(async ({ posenetOutput }) => activeModel.predict(posenetOutput))
+      : activeModel.predict(inCtx);
+    inference = job;
+    try {
+      const preds = await job;
+      if (epoch !== inputEpoch || activeModel !== model || activeTask !== modelTask) return;
+      if (!preds.length || preds.some(p => !Number.isFinite(p.probability))) throw new Error('분류 오류');
+      preds.forEach((p, i) => {
+        const v = Math.max(0, Math.min(1, p.probability));
+        smoothed[i] = smoothed[i] === undefined ? v : smoothed[i] * 0.5 + v * 0.5;
+      });
+      renderResults(preds, smoothed);
+    } catch (e) {
+      if (epoch === inputEpoch && activeTask === modelTask) {
+        model = null; candidate?.model?.dispose?.();
+        setModelStatus('AI 분류 오류: ' + e.message, 'err');
+      }
+    } finally {
+      if (inference === job) inference = null;
+    }
+  }
+
+  async function cameraLoop(epoch) {
+    if (epoch !== inputEpoch || camMode !== 'camera' || !stream) return;
+    const st = inspectFrame();
+    if (st !== frameState) {
+      frameState = st;
+      const camName = stream.getVideoTracks()[0]?.label || '카메라';
+      if (st === 'ready') camStatus(camName + ' · 실시간 인식 중', 'on');
+      else if (st === 'dark') camStatus('영상이 너무 어둡습니다. 카메라 가림막을 확인해주세요.', 'warn');
+      else camStatus('카메라 영상을 기다리고 있습니다…');
+    }
+    if (st === 'ready') await classifyFrame(epoch);
+    if (epoch === inputEpoch && camMode === 'camera') {
+      camTimer = setTimeout(() => cameraLoop(epoch), 120);
+    }
+  }
+
+  function resetCamera() {
+    inputEpoch++;
+    clearTimeout(camTimer); camTimer = null;
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    const vid = $('video');
+    vid.pause(); vid.srcObject = null; vid.hidden = true;
+    $('cam-ph').hidden = false;
+    camMode = 'idle'; smoothed = []; frameState = 'waiting';
+    lastVideoTime = -1; lastVideoAdv = 0;
+    $('cam-start').disabled = false;
+    $('cam-stop').disabled = true;
+    $('cam-select').disabled = true;
+    camStatus('웹캠 시작을 눌러주세요.');
+    if (inputMode === 'camera') renderResults(null);
+    $('live-badge').hidden = true;
+  }
+
+  async function startCamera() {
+    resetCamera();
+    const epoch = inputEpoch;
+    $('cam-start').disabled = true;
+    camStatus('카메라 권한을 요청합니다…');
+    try {
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia)
+        throw Object.assign(new Error('이 페이지에서 카메라를 사용할 수 없습니다. HTTPS 주소로 접속해주세요.'), { name: 'SecurityError' });
+      const deviceId = $('cam-select').value;
+      const acquired = await navigator.mediaDevices.getUserMedia({
+        video: deviceId ? { deviceId: { exact: deviceId } } : true, audio: false
+      });
+      if (epoch !== inputEpoch) { acquired.getTracks().forEach(t => t.stop()); return; }
+      stream = acquired; camMode = 'camera'; lastVideoAdv = performance.now();
+      const vid = $('video');
+      vid.srcObject = stream; vid.hidden = false;
+      $('cam-ph').hidden = true;
+      await vid.play();
+      if (epoch !== inputEpoch) return;
+      $('cam-stop').disabled = false;
+      $('cam-select').disabled = false;
+      refreshCameras(epoch);
+      for (const t of stream.getVideoTracks()) {
+        t.addEventListener('ended', () => { if (epoch === inputEpoch) { resetCamera(); camStatus('카메라 연결이 종료됐습니다.', 'err', true); } });
+      }
+      if (!model && !modelLoading && !autoAttempted) connectModel();
+      $('live-badge').hidden = false;
+      void cameraLoop(epoch);
+    } catch (e) {
+      if (epoch === inputEpoch) {
+        const msgs = {
+          NotAllowedError:  '카메라 권한이 차단됐습니다. 주소창 왼쪽 설정에서 허용해주세요.',
+          NotFoundError:    '카메라를 찾지 못했습니다. 웹캠 연결을 확인해주세요.',
+          NotReadableError: '카메라를 열 수 없습니다. 다른 앱이 사용 중일 수 있습니다.',
+          SecurityError:    e.message,
+        };
+        resetCamera();
+        camStatus(msgs[e.name] || e.message, 'err', true);
+        $('cam-start').disabled = false;
+      }
+    }
+  }
+
+  async function refreshCameras(epoch) {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      if (epoch !== undefined && epoch !== inputEpoch) return;
+      const sel = $('cam-select');
+      const prev = sel.value;
+      sel.replaceChildren();
+      const def = document.createElement('option'); def.value = ''; def.textContent = '기본 카메라'; sel.append(def);
+      devices.filter(d => d.kind === 'videoinput' && d.deviceId).forEach((d, i) => {
+        const o = document.createElement('option'); o.value = d.deviceId;
+        o.textContent = d.label || '카메라 ' + (i + 1); sel.append(o);
+      });
+      if (Array.from(sel.options).some(o => o.value === prev)) sel.value = prev;
+    } catch {}
+  }
+
+  // ── File upload ──
+  function fileStatus(text, dotState = '', isErr = false) {
+    $('file-status-tx').textContent = text;
+    $('file-dot').className = 'sdot' + (dotState ? ' ' + dotState : '');
+    $('file-status-ln').className = 'status-ln' + (isErr ? ' err-line' : '');
+  }
+
+  function updateAnalyzeBtn() {
+    $('analyze-btn').disabled = !model || !uploadedImg;
+  }
+
+  async function analyzeFileImage() {
+    if (!model || !uploadedImg) {
+      if (!model) fileStatus('모델을 먼저 연결해주세요.', 'warn');
+      return;
+    }
+    fileStatus('색상 분석 중…');
+    try {
+      const img = uploadedImg;
+      const s = Math.min(img.naturalWidth || img.width, img.naturalHeight || img.height);
+      inCtx2d.clearRect(0, 0, 400, 400);
+      inCtx2d.drawImage(img, ((img.naturalWidth || img.width) - s) / 2, ((img.naturalHeight || img.height) - s) / 2, s, s, 0, 0, 400, 400);
+      let preds;
+      if (modelKind === 'pose') {
+        const { posenetOutput } = await model.estimatePose(inCtx);
+        preds = await model.predict(posenetOutput);
+      } else {
+        preds = await model.predict(inCtx);
+      }
+      renderResults(preds, null);
+      fileStatus('분석 완료', 'on');
+    } catch (e) {
+      fileStatus('분석 오류: ' + (e.message || '알 수 없는 오류'), 'err', true);
+    }
+  }
+
+  function loadImage(file) {
+    if (!file || !file.type.startsWith('image/')) {
+      fileStatus('이미지 파일(JPG, PNG 등)만 지원합니다.', 'err', true);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = $('img-preview');
+      img.onload = () => {
+        uploadedImg = img;
+        $('upload-zone').hidden = true;
+        $('file-prev-wrap').hidden = false;
+        $('clear-btn').hidden = false;
+        updateAnalyzeBtn();
+        if (model) {
+          analyzeFileImage();
+        } else {
+          fileStatus('이미지 로드 완료 · 모델을 연결하면 자동으로 분석됩니다.', 'on');
+          if (!autoAttempted) connectModel();
+        }
+      };
+      img.onerror = () => fileStatus('이미지를 불러올 수 없습니다.', 'err', true);
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearImage() {
+    uploadedImg = null;
+    $('img-preview').src = '';
+    $('upload-zone').hidden = false;
+    $('file-prev-wrap').hidden = true;
+    $('clear-btn').hidden = true;
+    $('img-input').value = '';
+    updateAnalyzeBtn();
+    fileStatus('이미지를 업로드해주세요.');
+    renderResults(null);
+  }
+
+  // ── Tab switching ──
+  function switchTab(tab) {
+    inputMode = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      const active = btn.dataset.tab === tab;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', String(active));
+    });
+    $('tab-camera').hidden = tab !== 'camera';
+    $('tab-file').hidden   = tab !== 'file';
+    if (tab === 'camera') {
+      $('live-badge').hidden = !(camMode === 'camera' && model);
+    } else {
+      $('live-badge').hidden = true;
+      if (uploadedImg && model) analyzeFileImage();
+      else if (!uploadedImg) renderResults(null);
+    }
+  }
+
+  // ── Event wiring ──
+  $('cam-start').addEventListener('click', () => startCamera());
+  $('cam-stop').addEventListener('click', () => { resetCamera(); camStatus('카메라를 정지했습니다.'); });
+  $('cam-select').addEventListener('change', () => { if (camMode === 'camera') startCamera(); });
+
+  $('model-btn').addEventListener('click', () => $('model-file-input').click());
+  $('model-file-input').addEventListener('change', e => {
+    const files = Array.from(e.target.files); e.target.value = '';
+    if (files.length) connectModel(files);
+  });
+
+  $('threshold').addEventListener('input', () => {
+    $('thr-val').textContent = $('threshold').value + '%';
+  });
+
+  // Settings panel toggle
+  $('set-toggle').addEventListener('click', () => {
+    const panel = $('set-panel');
+    const isOpen = !panel.hidden;
+    panel.hidden = isOpen;
+    $('set-toggle').setAttribute('aria-expanded', String(!isOpen));
+  });
+
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  // File input
+  $('img-input').addEventListener('change', e => {
+    if (e.target.files[0]) loadImage(e.target.files[0]);
+  });
+
+  // Drag-and-drop
+  const uz = $('upload-zone');
+  uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('dragover'); });
+  uz.addEventListener('dragleave', e => { if (!uz.contains(e.relatedTarget)) uz.classList.remove('dragover'); });
+  uz.addEventListener('drop', e => {
+    e.preventDefault(); uz.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f) loadImage(f);
+  });
+
+  $('analyze-btn').addEventListener('click', () => analyzeFileImage());
+  $('clear-btn').addEventListener('click', () => clearImage());
+
+  navigator.mediaDevices?.addEventListener?.('devicechange', () => refreshCameras());
+  window.addEventListener('pagehide', () => { inputEpoch++; if (stream) stream.getTracks().forEach(t => t.stop()); });
+
+  // Auto-connect model on page load
+  connectModel();
+})();
+</script>
+
+</body></html>
